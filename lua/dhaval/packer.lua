@@ -23,8 +23,6 @@ return require("packer").startup(function(use)
 
 	use("nvim-treesitter/nvim-treesitter", { run = ":TSUpdate" })
 
-	use("nvim-treesitter/playground")
-
 	use("theprimeagen/harpoon")
 
 	use("mbbill/undotree")
@@ -117,4 +115,6 @@ return require("packer").startup(function(use)
 		run = "npm install --legacy-peer-deps && npx gulp vsDebugServerBundle && mv dist out",
 	})
 	use("mfussenegger/nvim-dap-python")
+
+    use {'ojroques/nvim-osc52'}
 end)
