@@ -143,4 +143,6 @@ require("lazy").setup({
 
 	-- OSC52
 	"ojroques/nvim-osc52",
+
+	"supermaven-inc/supermaven-nvim",
 })
