@@ -1,70 +1,93 @@
--- Mason (installer)
+-- Modern LSP setup for Neovim 0.11+ using vim.lsp.config
 require("mason").setup()
 require("mason-lspconfig").setup({
-  ensure_installed = {
-    "pyright",
-    "rust_analyzer",
-    "lua_ls",
-  },
+	ensure_installed = {
+		"pyright",
+		"rust_analyzer",
+		"lua_ls",
+	},
+	automatic_installation = true,
 })
 
--- Capabilities (for cmp)
-local capabilities = vim.lsp.protocol.make_client_capabilities()
-local ok_cmp, cmp_lsp = pcall(require, "cmp_nvim_lsp")
-if ok_cmp then
-  capabilities = cmp_lsp.default_capabilities(capabilities)
+local lsp_capabilities = require("cmp_nvim_lsp").default_capabilities()
+
+-- Use an on_attach function to only map the following keys
+-- after the language server attaches to the current buffer
+local on_attach = function(client, bufnr)
+	local opts = { buffer = bufnr, remap = false }
+
+	vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, opts)
+	vim.keymap.set("n", "K", function() vim.lsp.buf.hover() end, opts)
+	vim.keymap.set("n", "<leader>vws", function() vim.lsp.buf.workspace_symbol() end, opts)
+	vim.keymap.set("n", "<leader>vd", function() vim.diagnostic.open_float() end, opts)
+	vim.keymap.set("n", "[d", function() vim.diagnostic.goto_next() end, opts)
+	vim.keymap.set("n", "]d", function() vim.diagnostic.goto_prev() end, opts)
+	vim.keymap.set("n", "<leader>vca", function() vim.lsp.buf.code_action() end, opts)
+	vim.keymap.set("n", "<leader>vrr", function() vim.lsp.buf.references() end, opts)
+	vim.keymap.set("n", "<leader>vrn", function() vim.lsp.buf.rename() end, opts)
+	vim.keymap.set("i", "<C-h>", function() vim.lsp.buf.signature_help() end, opts)
 end
 
--- PYTHON
-vim.lsp.config.pyright = {
-  capabilities = capabilities,
-}
-
--- RUST
-vim.lsp.config.rust_analyzer = {
-  capabilities = capabilities,
-}
-
--- LUA (fix vim global)
-vim.lsp.config.lua_ls = {
-  capabilities = capabilities,
-  settings = {
-    Lua = {
-      diagnostics = { globals = { "vim" } },
-    },
-  },
-}
-
--- Enable servers
-vim.lsp.enable({
-  "pyright",
-  "rust_analyzer",
-  "lua_ls",
+-- Configure servers using vim.lsp.config (Neovim 0.11+ API)
+vim.lsp.config("pyright", {
+	cmd = { "pyright-langserver", "--stdio" },
+	filetypes = { "python" },
+	on_attach = on_attach,
+	capabilities = lsp_capabilities,
 })
 
--- Keymaps (replaces lsp.on_attach)
-vim.api.nvim_create_autocmd("LspAttach", {
-  callback = function(ev)
-    local opts = { buffer = ev.buf }
-
-    vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-    vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-    vim.keymap.set("n", "<leader>vws", vim.lsp.buf.workspace_symbol, opts)
-    vim.keymap.set("n", "<leader>vd", vim.diagnostic.open_float, opts)
-    vim.keymap.set("n", "[d", vim.diagnostic.goto_next, opts)
-    vim.keymap.set("n", "]d", vim.diagnostic.goto_prev, opts)
-    vim.keymap.set("n", "<leader>vca", vim.lsp.buf.code_action, opts)
-    vim.keymap.set("n", "<leader>vrr", vim.lsp.buf.references, opts)
-    vim.keymap.set("n", "<leader>vrn", vim.lsp.buf.rename, opts)
-    vim.keymap.set("i", "<C-h>", vim.lsp.buf.signature_help, opts)
-  end,
+vim.lsp.config("rust_analyzer", {
+	cmd = { "rust-analyzer" },
+	filetypes = { "rust" },
+	on_attach = on_attach,
+	capabilities = lsp_capabilities,
 })
 
--- Diagnostics UI
+vim.lsp.config("lua_ls", {
+	cmd = { "lua-language-server" },
+	filetypes = { "lua" },
+	on_attach = on_attach,
+	capabilities = lsp_capabilities,
+	settings = {
+		Lua = {
+			diagnostics = {
+				globals = { "vim" },
+			},
+		},
+	},
+})
+
+-- Enable the configured servers
+vim.lsp.enable({ "pyright", "rust_analyzer", "lua_ls" })
+
+
+
+
+
+-- Autocompletion setup
+local cmp = require("cmp")
+local luasnip = require("luasnip")
+
+require("luasnip.loaders.from_vscode").lazy_load()
+
+cmp.setup({
+	sources = {
+		{ name = "nvim_lsp" },
+		{ name = "luasnip" },
+	},
+	mapping = cmp.mapping.preset.insert({
+		["<C-p>"] = cmp.mapping.select_prev_item(),
+		["<C-n>"] = cmp.mapping.select_next_item(),
+		["<C-y>"] = cmp.mapping.confirm({ select = true }),
+		["<C-Space>"] = cmp.mapping.complete(),
+	}),
+	snippet = {
+		expand = function(args)
+			luasnip.lsp_expand(args.body)
+		end,
+	},
+})
+
 vim.diagnostic.config({
-  virtual_text = true,
-  signs = true,
-  underline = true,
-  update_in_insert = false,
+	virtual_text = true,
 })
-
